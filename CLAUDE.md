@@ -4,56 +4,33 @@ This file provides guidance to Claude Code when working with code in this reposi
 
 ## Project Overview
 
-This is a **Claude Code Skills** project for Godot development verification. It provides a `/godot-verify` skill to validate Godot project changes using the godot-mcp server.
+This is a **Claude Code Skills** project for developing and managing custom Claude Code skills. Each skill is a subdirectory with its own SKILL.md.
 
-## MCP Server Configuration
+## Directory Structure
 
-This project uses the **MCP Proxy** at `http://localhost:8082/godot` path to access Godot development tools:
-
-- **godot-check**: Godot 项目检查工具（lint + format + export validation）
-- **godot-docs**: Godot 引擎文档查询
-
-Configure your Claude Code to connect to:
 ```
-MCP Proxy URL: http://localhost:8082/godot
-```
-
-## Available Skill
-
-### /godot-verify
-
-Validate Godot project changes by running:
-- **gdlint**: Lint GDScript files for code quality
-- **gdformat**: Check GDScript formatting
-- **godot_get_errors**: Parse error logs for issues
-- **godot_export_validate**: Validate export presets (optional)
-
-**Usage:**
-```
-/godot-verify
-```
-
-This skill will:
-1. Detect the Godot project root directory
-2. Run lint checks on modified/new GDScript files
-3. Check formatting consistency
-4. Parse any error logs
-5. Report all findings and issues
-
-## Build & Test Commands
-
-```bash
-# Start MCP Proxy (if not already running)
-cd D:/project/python/mcp-proxy
-python main.py
-
-# Test godot-mcp server directly
-cd E:/project/typescript/godot-mcp
-npm test
+D:/project/docs/my_skills/
+├── godot-verify/        # Skill: Godot project verification
+│   └── SKILL.md
+├── another-skill/       # Another skill
+│   └── SKILL.md
+├── .claude/             # Claude Code configuration (project settings)
+└── CLAUDE.md            # This file
 ```
 
 ## Path Requirements
 
 - All path parameters MUST be absolute paths
-- Godot project root must contain `project.godot` file
-- GDScript files must have `.gd` extension
+
+## Build & Test Commands
+
+```bash
+# Test skill locally (load from project root)
+cc --plugin-dir D:/project/docs/my_skills
+```
+
+## Skill Development
+
+After modifying skills in this project, manually sync to global skills directory:
+- Source: `D:/project/docs/my_skills/<skill-name>`
+- Target: `C:\Users\hpc\.claude\skills\<skill-name>`

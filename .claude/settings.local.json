@@ -8,7 +8,9 @@
       "mcp__allinone__github__search_repositories",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Skill(example-skills:skill-creator)"
+      "Skill(example-skills:skill-creator)",
+      "mcp__plugin_context7_context7__resolve-library-id",
+      "mcp__plugin_context7_context7__get-library-docs"
     ]
   }
 }
