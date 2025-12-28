@@ -1,145 +1,130 @@
 ---
 name: godot-verify
-description: Validate Godot project changes using gdlint, gdformat, and error checking. Use this skill when users want to verify GDScript code quality, check for lint errors, validate formatting, or parse error logs in a Godot project. This skill chains multiple godot-mcp tools to provide comprehensive validation.
+description: Validate Godot GDScript files using gdlint, gdformat, and error log parsing. Use when users want to: (1) Check code quality after making changes, (2) Validate before committing, (3) Debug runtime errors, (4) Run export validation. Chains godot-mcp tools for comprehensive project checking.
 license: MIT
 ---
 
 # Godot Verification Skill
 
-This skill validates Godot project changes by running a comprehensive check suite using the godot-mcp server tools.
+Validate Godot project changes using gdlint, gdformat, and error log parsing via godot-mcp server.
 
-## When to Use
+## Available Tools
 
-- After making changes to GDScript files
-- Before committing Godot project changes
-- When debugging GDScript issues
-- After running Godot exports
-- When code review requires validation
+| Tool | Purpose | Parameters |
+|------|---------|------------|
+| `gdlint` | Lint GDScript files | `project`, `file`, `all` |
+| `gdformat` | Format/check GDScript | `project`, `file`, `check` |
+| `godot_export_validate` | Validate export dependencies | `project`, `preset` |
+| `godot_get_errors` | Parse error logs | `project`, `log_file` |
+| `godot_check_all` | Run all checks sequentially | `project`, `file` |
 
-## Workflow
-
-Follow this process to validate Godot project changes:
-
-### Step 1: Detect Godot Project Root
-
-1. Find the project root directory containing `project.godot`
-2. Use the current working directory or search parent directories
-3. Verify the project path is absolute
-
-### Step 2: Run Comprehensive Check
-
-Use the `godot_check_all` tool with the detected project path:
+## Quick Start
 
 ```json
-{
-  "project": "<absolute_path_to_godot_project_root>"
-}
+// Run full project check
+{ "project": "D:/path/to/godot-project" }
+
+// Check single file
+{ "project": "D:/path/to/godot-project", "file": "D:/path/to/script.gd" }
+
+// Check format only (no changes)
+{ "project": "D:/path/to/godot-project", "file": "D:/path/to/script.gd", "check": true }
 ```
 
-This tool runs:
-- **gdlint** on all GDScript files in the project
-- **gdformat** in check mode (reports formatting issues without modifying)
-- **godot_get_errors** to parse error logs
+## Path Conversion
 
-### Step 3: Parse Results
+godot-mcp returns paths in `res://` format. Convert to local paths:
 
-The tool returns results with:
-- `success`: Overall success status
-- `lint_results`: Linting output and any linting errors
-- `format_results`: Formatting check output
-- `export_results`: Export validation results (if requested)
-- `error_logs`: Parsed error/warning patterns
+```
+res://scripts/Player.gd → {project}/scripts/Player.gd
+res://autoload/Game.gd → {project}/autoload/Game.gd
+res://:// → {project}/
+```
 
-### Step 4: Generate Report
+## Lint Rules (gdlint)
 
-Compile a validation report with:
+| Rule | Severity | Description |
+|------|----------|-------------|
+| `unused-variable` | Error | Variable declared but never used |
+| `shadowed-variable` | Error | Variable shadows member variable |
+| `function-name` | Error | Function name violates naming convention |
+| `constant-name` | Error | Constant name violates naming convention |
+| `trailing-whitespace` | Warning | Lines have trailing whitespace |
+| `missing-docstring` | Warning | Function missing documentation |
+| `line-too-long` | Warning | Line exceeds 120 characters |
 
-**Format Issues:**
-- List files with linting errors
-- Show error counts and types
+## Error Log Patterns
 
-**Formatting Issues:**
-- List files that need formatting
-- Show what would change
+Parse logs for these patterns:
+- `ERROR:` / `Error` / `error` - Critical errors
+- `Identifier` - Undefined identifier references
+- `res://` - File paths in error messages
 
-**Error Log Issues:**
-- Extract ERROR/Error/error patterns from logs
-- Show file and line numbers if available
-
-**Summary:**
-- Total files checked
-- Critical issues (errors)
-- Warnings (formatting, style)
-- Recommended actions
-
-### Step 5: Provide Actionable Output
-
-Report findings in a structured format:
+## Report Format
 
 ```
 === Godot Verification Report ===
 
-Project: <project_path>
-Files Checked: <count>
+Project: {project}
+Time: {timestamp}
 
-[Critical Issues]
-- <file>: <error description>
+[CRITICAL] {count}
+  - {file}:{line} - {error message}
 
-[Formatting Issues]
-- <file>: <formatting suggestion>
+[WARNING] {count}
+  - {file}:{line} - {warning message}
 
-[Warnings]
-- <file>: <warning description>
+[FORMATTING] {count}
+  - {file} - {what needs fixing}
 
-[Recommendations]
-1. Fix critical issues first
-2. Run `gdformat` on files with formatting issues
-3. Review warnings for potential improvements
+[EXPORT] {pass|fail}
+  - {export errors if any}
 
-Total: <N> issues found
+Summary: {total} issues found
+  - {critical} critical, {warning} warnings, {formatting} formatting
 ```
 
 ## Error Handling
 
-- If `godot_check_all` fails, try individual tools:
-  - `gdlint` for linting
-  - `gdformat` with `check: true` for formatting validation
-  - `godot_get_errors` for log parsing
+| Error | Solution |
+|-------|----------|
+| `No project.godot found` | Navigate to project root or provide absolute path |
+| `gdlint not found` | Install: `pip install gdtoolkit` |
+| `GDOT_BIN not set` | Set env or use `godot` in PATH |
+| `Path must be absolute` | Convert relative to absolute paths |
 
-- If no Godot project found, report error with guidance:
-  - "No `project.godot` file found in the current directory or parent directories"
-  - "Please ensure you're in a valid Godot project directory"
+## Common Workflows
 
-## Example Output
-
+### After Code Changes
+```json
+{ "project": "{project_path}", "file": "{changed_file}" }
 ```
-=== Godot Verification Report ===
 
-Project: D:/my-game
-Files Checked: 47
+### Pre-commit Validation
+```json
+{ "project": "{project_path}" }
+```
 
-[Critical Issues]
-- res://scripts/Player.gd:12 - Variable 'health' shadows member variable
-- res://scripts/Enemy.gd:45 - Unused variable 'old_velocity'
+### Debug Runtime Errors
+1. Get errors: `godot_get_errors` with `log_file`
+2. Check affected files: `gdlint` on specific files
+3. Fix and format: `gdformat` (without check)
 
-[Formatting Issues]
-- res://scripts/Player.gd: Lines 20-25 need indentation adjustment
-- res://scripts/GameManager.gd: Missing blank line before return statement
-
-[Warnings]
-- res://scripts/Enemy.gd:90 - Function 'take_damage' could be static
-
-Recommendations:
-1. Fix critical issues first (variable shadowing, unused variables)
-2. Run `gdformat res://scripts/Player.gd` to fix formatting
-3. Consider making 'take_damage' static if it doesn't use 'self'
-
-Total: 5 issues found (2 critical, 2 formatting, 1 warning)
+### Export Validation
+```json
+{ "project": "{project_path}", "preset": "Web" }
 ```
 
 ## Configuration
 
-The skill uses these environment variables (configured in MCP Proxy):
-- `GODOT_BIN`: Path to Godot executable (defaults to `godot` in PATH)
+Set via MCP Proxy environment:
+```
+GODOT_BIN=godot          # Default: godot (in PATH)
+```
 
-All paths must be absolute - the skill will handle path conversion if needed.
+## Tips
+
+- Use `file` param to check only changed files (faster)
+- `gdformat` with `check: true` shows what would change
+- Export validation catches dependency issues lint misses
+- Error logs show runtime issues lint misses
