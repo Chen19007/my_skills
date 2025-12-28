@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__allinone__everything__everything_search_files",
+      "mcp__allinone__file-edit__directory_create",
+      "mcp__allinone__file-edit__file_write",
+      "Bash(git init)",
+      "mcp__allinone__github__search_repositories",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
+    ]
+  }
+}
