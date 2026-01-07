@@ -1,44 +1,64 @@
 ---
 name: godot-verify
-description: Validate Godot GDScript files using gdlint, gdformat, and error log parsing. Use when users want to: (1) Check code quality after making changes, (2) Validate before committing, (3) Debug runtime errors, (4) Run export validation. Chains godot-mcp tools for comprehensive project checking.
+description: Validate Godot GDScript files using gdlint, gdformat, and gdradon. Use when users want to: (1) Check code quality after making changes, (2) Validate before committing, (3) Run code metrics analysis, (4) Run export validation. Uses command-line tools directly.
 license: MIT
 ---
 
 # Godot Verification Skill
 
-Validate Godot project changes using gdlint, gdformat, and error log parsing via godot-mcp server.
+Validate Godot project changes using gdlint, gdformat, gdradon, and godot export commands.
 
-## Available Tools
+## 检查项
 
-| Tool | Purpose | Parameters |
-|------|---------|------------|
-| `gdlint` | Lint GDScript files | `project`, `file`, `all` |
-| `gdformat` | Format/check GDScript | `project`, `file`, `check` |
-| `godot_export_validate` | Validate export dependencies | `project`, `preset` |
-| `godot_get_errors` | Parse error logs | `project`, `log_file` |
-| `godot_check_all` | Run all checks sequentially | `project`, `file` |
+| 检查 | 命令 | 说明 |
+|------|------|------|
+| Lint | `gdlint` | Lint GDScript 代码 |
+| Format | `gdformat` | 格式化/检查格式 |
+| Metrics | `gdradon cc` | 代码指标分析 |
+| Export | `godot --export-pack` | 导出验证 |
 
-## Quick Start
-
-```json
-// Run full project check
-{ "project": "D:/path/to/godot-project" }
-
-// Check single file
-{ "project": "D:/path/to/godot-project", "file": "D:/path/to/script.gd" }
-
-// Check format only (no changes)
-{ "project": "D:/path/to/godot-project", "file": "D:/path/to/script.gd", "check": true }
-```
-
-## Path Conversion
-
-godot-mcp returns paths in `res://` format. Convert to local paths:
+## gdradon 输出
 
 ```
-res://scripts/Player.gd → {project}/scripts/Player.gd
-res://autoload/Game.gd → {project}/autoload/Game.gd
-res://:// → {project}/
+gdradon cc <path>
+```
+
+输出格式：
+```
+F <line>:<col> <function_name> - <grade> (<cc>)
+```
+
+| 字段 | 说明 |
+|------|------|
+| F | 函数 (Function) |
+| `<line>:<col>` | 行号和列号 |
+| `<function_name>` | 函数名 |
+| `<grade>` | 复杂度等级: A(简单), B(中等), C(复杂), D(非常复杂), F(极复杂) |
+| `<cc>` | 圈复杂度数值 |
+
+示例：
+```
+.\character_body_2d.gd
+    F 13:0 _physics_process - C (15)
+```
+
+## 使用示例
+
+```bash
+# Lint 检查
+gdlint "D:/project/scripts/Player.gd"
+
+# Format 检查
+gdformat --check "D:/project/scripts/Player.gd"
+
+# 代码指标
+gdradon cc D:/project/scripts/
+
+# 完整检查
+gdlint D:/project/scripts/ && gdformat D:/project/scripts/ && gdradon cc D:/project/scripts/
+
+# 导出验证
+godot --headless --path "D:/project" --export-pack "Web" "D:/export.pck"
 ```
 
 ## Lint Rules (gdlint)
@@ -53,78 +73,52 @@ res://:// → {project}/
 | `missing-docstring` | Warning | Function missing documentation |
 | `line-too-long` | Warning | Line exceeds 120 characters |
 
-## Error Log Patterns
-
-Parse logs for these patterns:
-- `ERROR:` / `Error` / `error` - Critical errors
-- `Identifier` - Undefined identifier references
-- `res://` - File paths in error messages
-
-## Report Format
-
-```
-=== Godot Verification Report ===
-
-Project: {project}
-Time: {timestamp}
-
-[CRITICAL] {count}
-  - {file}:{line} - {error message}
-
-[WARNING] {count}
-  - {file}:{line} - {warning message}
-
-[FORMATTING] {count}
-  - {file} - {what needs fixing}
-
-[EXPORT] {pass|fail}
-  - {export errors if any}
-
-Summary: {total} issues found
-  - {critical} critical, {warning} warnings, {formatting} formatting
-```
-
 ## Error Handling
 
 | Error | Solution |
 |-------|----------|
 | `No project.godot found` | Navigate to project root or provide absolute path |
 | `gdlint not found` | Install: `pip install gdtoolkit` |
-| `GDOT_BIN not set` | Set env or use `godot` in PATH |
+| `gdradon not found` | Install: `pip install gdradon` |
+| `godot not found` | Add godot to PATH |
 | `Path must be absolute` | Convert relative to absolute paths |
 
 ## Common Workflows
 
 ### After Code Changes
-```json
-{ "project": "{project_path}", "file": "{changed_file}" }
+```bash
+gdlint "D:/project/scripts/Player.gd"
 ```
 
 ### Pre-commit Validation
-```json
-{ "project": "{project_path}" }
+```bash
+gdlint D:/project/scripts/ && gdformat D:/project/scripts/
 ```
 
-### Debug Runtime Errors
-1. Get errors: `godot_get_errors` with `log_file`
-2. Check affected files: `gdlint` on specific files
-3. Fix and format: `gdformat` (without check)
+### Code Metrics Analysis
+```bash
+gdradon cc D:/project/scripts/
+```
+输出示例：
+```
+.\character_body_2d.gd
+    F 13:0 _physics_process - C (15)
+```
 
 ### Export Validation
-```json
-{ "project": "{project_path}", "preset": "Web" }
+```bash
+godot --headless --path "D:/project" --export-pack "Web" "D:/export.pck"
 ```
 
-## Configuration
+## 安装要求
 
-Set via MCP Proxy environment:
-```
-GODOT_BIN=godot          # Default: godot (in PATH)
-```
+- `pip install gdtoolkit` (gdlint, gdformat)
+- `pip install gdradon` (code metrics)
+- `godot` in PATH (export validation)
 
 ## Tips
 
 - Use `file` param to check only changed files (faster)
-- `gdformat` with `check: true` shows what would change
+- `gdformat --check` shows what would change without modifying
+- `gdradon cc` shows complexity and maintainability metrics
 - Export validation catches dependency issues lint misses
-- Error logs show runtime issues lint misses
