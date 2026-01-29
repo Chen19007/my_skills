@@ -59,6 +59,9 @@ gdradon cc D:/project/scripts/
 # 调用 MCP 工具获取诊断（只需 uri 参数）
 godot-lsp__diagnostics(uri="file:///D:/project/game/player.gd")
 
+# LSP 诊断（修改代码后使用 refresh=true）
+godot-lsp__diagnostics(uri="file:///D:/project/game/player.gd", refresh=true)
+
 # 完整检查
 gdlint D:/project/scripts/ && gdformat D:/project/scripts/ && gdradon cc D:/project/scripts/
 
@@ -81,6 +84,7 @@ godot --headless --path "D:/project" --export-pack "Web" "D:/export.pck"
 
 **参数**:
 - `uri` (必需): `file://` URI，例如 `file:///D:/project/game/player.gd`
+- `refresh` (可选): 是否强制刷新诊断缓存，默认 false
 
 **返回**:
 ```json
@@ -103,6 +107,7 @@ godot --headless --path "D:/project" --export-pack "Web" "D:/export.pck"
 - DiagnosticsServer 会自动读取文件内容，无需传递 `text` 参数
 - 首次查询会打开文件并等待诊断（约 500ms）
 - 后续查询直接从缓存返回，速度更快
+- **修改代码后推荐使用 `refresh=true` 强制刷新缓存**，确保获取最新诊断结果
 
 ### 诊断级别 (severity)
 
