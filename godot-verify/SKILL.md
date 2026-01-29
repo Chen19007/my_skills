@@ -1,21 +1,22 @@
 ---
 name: godot-verify
-description: Validate Godot GDScript files using gdlint, gdformat, and gdradon. Use when users want to: (1) Check code quality after making changes, (2) Validate before committing, (3) Run code metrics analysis, (4) Run export validation. Uses command-line tools directly.
+description: Validate Godot GDScript files using gdlint, gdformat, gdradon, and LSP diagnostics. Use when users want to: (1) Check code quality after making changes, (2) Validate before committing, (3) Run code metrics analysis, (4) Run export validation, (5) Get real-time LSP diagnostics. Uses command-line tools directly and MCP tools for LSP integration.
 license: MIT
 ---
 
 # Godot Verification Skill
 
-Validate Godot project changes using gdlint, gdformat, gdradon, and godot export commands.
+Validate Godot project changes using gdlint, gdformat, gdradon, godot export commands, and LSP diagnostics.
 
 ## 检查项
 
-| 检查 | 命令 | 说明 |
-|------|------|------|
+| 检查 | 命令/工具 | 说明 |
+|------|----------|------|
 | Lint | `gdlint` | Lint GDScript 代码 |
 | Format | `gdformat` | 格式化/检查格式 |
 | Metrics | `gdradon cc` | 代码指标分析 |
 | Export | `godot --export-pack` | 导出验证 |
+| **LSP Diagnostics** | **`godot-lsp__diagnostics`** | **实时语法检查（通过 MCP）** |
 
 ## gdradon 输出
 
@@ -54,12 +55,99 @@ gdformat --check "D:/project/scripts/Player.gd"
 # 代码指标
 gdradon cc D:/project/scripts/
 
+# LSP 诊断（DiagnosticsServer 为开机自启动服务）
+# 调用 MCP 工具获取诊断（只需 uri 参数）
+godot-lsp__diagnostics(uri="file:///D:/project/game/player.gd")
+
 # 完整检查
 gdlint D:/project/scripts/ && gdformat D:/project/scripts/ && gdradon cc D:/project/scripts/
 
 # 导出验证
 godot --headless --path "D:/project" --export-pack "Web" "D:/export.pck"
 ```
+
+## LSP Diagnostics
+
+**Godot LSP 诊断提供实时的语法检查和错误检测，与 Godot 编辑器显示的诊断一致。**
+
+### 前置条件
+
+1. **Godot 编辑器运行**（Godot LSP 服务器在编辑器启动时自动开启，默认端口 6005）
+2. **DiagnosticsServer 运行**（开机自启动服务，提供诊断缓存）
+
+### MCP 工具调用
+
+**工具名**: `godot-lsp__diagnostics`
+
+**参数**:
+- `uri` (必需): `file://` URI，例如 `file:///D:/project/game/player.gd`
+
+**返回**:
+```json
+{
+  "uri": "file:///D:/project/game/player.gd",
+  "diagnostics": [
+    {
+      "range": { "start": { "line": 4, "character": 0 }, "end": { "line": 4, "character": 56 } },
+      "severity": 2,
+      "code": 9,
+      "source": "gdscript",
+      "message": "(SHADOWED_GLOBAL_IDENTIFIER): The constant \"AttackType\" has the same name as a global class..."
+    }
+  ],
+  "cached": false  // true 表示从缓存返回，false 表示新打开文件
+}
+```
+
+**说明**:
+- DiagnosticsServer 会自动读取文件内容，无需传递 `text` 参数
+- 首次查询会打开文件并等待诊断（约 500ms）
+- 后续查询直接从缓存返回，速度更快
+
+### 诊断级别 (severity)
+
+| 级别 | 值 | 说明 |
+|------|-----|------|
+| Error | 1 | 错误，必须修复 |
+| Warning | 2 | 警告，建议修复 |
+| Information | 3 | 信息 |
+| Hint | 4 | 提示 |
+
+### 常见诊断代码
+
+| 代码 | 消息 | 说明 |
+|------|------|------|
+| 1 | `PARSER_ERROR` | 语法错误 |
+| 9 | `SHADOWED_GLOBAL_IDENTIFIER` | 常量名与全局类冲突 |
+| 12 | `STATIC_VARIABLE_TYPE_MISMATCH` | 静态变量类型不匹配 |
+| 21 | `RETURN_VALUE_DISCARDED` | 返回值未使用 |
+| 30 | `UNSAFE_CALL` | 不安全的函数调用 |
+| 40 | `UNASSIGNED_VARIABLE_ACCESS` | 访问未赋值的变量 |
+
+### HTTP API（直接访问 DiagnosticsServer）
+
+```bash
+# 获取诊断
+curl "http://127.0.0.1:3457/diagnostics?path=D:/project/game/player.gd"
+
+# 刷新诊断
+curl -X POST "http://127.0.0.1:3457/refresh" -d "{\"path\":\"D:/project/game/player.gd\"}"
+
+# 查看状态
+curl "http://127.0.0.1:3457/stats"
+```
+
+### 与 gdlint 对比
+
+| 特性 | LSP Diagnostics | gdlint |
+|------|----------------|--------|
+| 实时性 | 实时（缓存） | 需要运行 |
+| 错误类型 | 语法 + 语义 | Lint 规则 |
+| 与编辑器一致 | 完全一致 | 可能不同 |
+| 速度 | 快（有缓存） | 慢（需解析） |
+| 需要 Godot | 是 | 否 |
+
+**建议**: 使用 LSP Diagnostics 作为快速检查，gdlint 作为补充 lint 规则检查。
 
 ## Lint Rules (gdlint)
 
