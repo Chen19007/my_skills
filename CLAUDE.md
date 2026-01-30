@@ -28,9 +28,3 @@ D:/project/docs/my_skills/
 # Test skill locally (load from project root)
 cc --plugin-dir D:/project/docs/my_skills
 ```
-
-## Skill Development
-
-After modifying skills in this project, manually sync to global skills directory:
-- Source: `D:/project/docs/my_skills/<skill-name>`
-- Target: `C:\Users\hpc\.claude\skills\<skill-name>`
