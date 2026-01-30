@@ -24,7 +24,4 @@ D:/project/docs/my_skills/
 
 ## Build & Test Commands
 
-```bash
-# Test skill locally (load from project root)
-cc --plugin-dir D:/project/docs/my_skills
-```
+使用skill-metadata-check检查元数据
