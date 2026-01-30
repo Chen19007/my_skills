@@ -1,3 +1,8 @@
+---
+name: godot-design
+description: Godot GDScript 接口设计规范与指导，强调 TDD 友好、可测试、可维护的设计原则。
+---
+
 # Godot 接口设计 Skill
 
 ## 概述
@@ -34,7 +39,7 @@ class_name MathUtils
 
 场景在 Godot 中扮演类的角色：
 
-```typescript
+```gdscript
 # 场景是可复用、可实例化、可继承的节点组
 # Player.tscn (场景)
 # ├─ Sprite2D (子节点)

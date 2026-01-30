@@ -1,3 +1,8 @@
+---
+name: godot-tdd
+description: Godot TDD（测试驱动开发）流程总控，协调 godot-design、godot-dev、godot-test、godot-verify 完成开发闭环。
+---
+
 # Godot TDD 开发流程 Skill
 
 ## 概述

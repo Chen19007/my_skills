@@ -1,6 +1,8 @@
 ---
 name: godot-dev
-description: Godot code implementation guidelines. Use when: (1) Writing GDScript code, (2) Following style conventions, (3) Using Godot features correctly, (4) Avoiding anti-patterns.
+description: |
+  Godot code implementation guidelines.
+  Use when: (1) Writing GDScript code, (2) Following style conventions, (3) Using Godot features correctly, (4) Avoiding anti-patterns.
 ---
 
 # Godot 代码实现规范

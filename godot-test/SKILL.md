@@ -1,6 +1,8 @@
 ---
 name: godot-test
-description: Run GUT unit tests for Godot projects. Use when: (1) Running unit tests, (2) Verifying code changes, (3) TDD development, (4) CI/CD testing.
+description: |
+  Run GUT unit tests for Godot projects.
+  Use when: (1) Running unit tests, (2) Verifying code changes, (3) TDD development, (4) CI/CD testing.
 ---
 
 # Godot 测试框架 Skill (GUT)

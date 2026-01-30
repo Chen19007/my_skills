@@ -1,6 +1,8 @@
 ---
 name: scratchpad
-description: Workflow standardization for isolated trial experiments. Use when: (1) Testing hypotheses, (2) Trying API usage, (3) Debugging isolated issues, (4) Keeping main context clean. Focus on RESULTS, not process.
+description: |
+  Workflow standardization for isolated trial experiments.
+  Use when: (1) Testing hypotheses, (2) Trying API usage, (3) Debugging isolated issues, (4) Keeping main context clean. Focus on RESULTS, not process.
 license: MIT
 ---
 
