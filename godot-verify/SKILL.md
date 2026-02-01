@@ -11,6 +11,12 @@ license: MIT
 
 Validate Godot project changes using gdlint, gdformat, gdradon, godot export commands, and LSP diagnostics.
 
+## 排除规则
+
+**不要检查和处理 `addons` 目录下的任何文件。**
+
+`addons` 目录通常包含第三方插件或外部资源，这些代码不由项目维护，不应纳入项目代码质量检查范围。
+
 ## 检查项
 
 | 检查 | 命令/工具 | 说明 |
