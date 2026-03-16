@@ -11,6 +11,17 @@ DEFAULT_ASEPRITE_PATHS = [
     r'C:\\Program Files (x86)\\Aseprite\\aseprite.exe',
 ]
 DEFAULT_SHADOW_LAYERS = ['shadow']
+LAYER_EXPORT_FIELDS = {'name', 'output', 'layers', 'strict', 'clean'}
+BOOL_VALUES = {
+    '1': True,
+    'true': True,
+    'yes': True,
+    'on': True,
+    '0': False,
+    'false': False,
+    'no': False,
+    'off': False,
+}
 
 
 def find_aseprite(explicit):
@@ -60,7 +71,7 @@ def list_layers(aseprite, src):
     return [line.strip() for line in result.stdout.splitlines() if line.strip()]
 
 
-def resolve_shadow_layers(requested_layers, available_layers):
+def resolve_requested_layers(requested_layers, available_layers):
     available_lookup = {name.lower(): name for name in available_layers}
     resolved = []
     for layer_name in requested_layers:
@@ -68,6 +79,98 @@ def resolve_shadow_layers(requested_layers, available_layers):
         if key in available_lookup and available_lookup[key] not in resolved:
             resolved.append(available_lookup[key])
     return resolved
+
+
+def parse_bool(value, field_name):
+    normalized = value.strip().lower()
+    if normalized not in BOOL_VALUES:
+        raise SystemExit(
+            f'Invalid boolean for {field_name}: {value}. '
+            'Use one of: true, false, yes, no, on, off, 1, 0.'
+        )
+    return BOOL_VALUES[normalized]
+
+
+def parse_layer_export_arg(raw):
+    data = {}
+    for segment in raw.split(';'):
+        item = segment.strip()
+        if not item:
+            continue
+        if '=' not in item:
+            raise SystemExit(
+                'Invalid --layer-export segment '
+                f'"{item}". Expected key=value pairs separated by semicolons.'
+            )
+        key, value = item.split('=', 1)
+        key = key.strip().lower()
+        value = value.strip()
+        if not key or not value:
+            raise SystemExit(
+                f'Invalid --layer-export segment "{item}". Empty key or value is not allowed.'
+            )
+        data[key] = value
+
+    unknown_fields = sorted(set(data) - LAYER_EXPORT_FIELDS)
+    if unknown_fields:
+        raise SystemExit(
+            'Unknown --layer-export fields: '
+            f'{", ".join(unknown_fields)}. '
+            'Supported fields: name, output, layers, strict, clean.'
+        )
+
+    missing_fields = [field for field in ('name', 'output', 'layers') if field not in data]
+    if missing_fields:
+        raise SystemExit(
+            'Missing required --layer-export fields: '
+            f'{", ".join(missing_fields)}.'
+        )
+
+    layers = [part.strip() for part in data['layers'].split(',') if part.strip()]
+    if not layers:
+        raise SystemExit('Invalid --layer-export layers list. Provide at least one layer name.')
+
+    return {
+        'name': data['name'],
+        'output': data['output'],
+        'layers': layers,
+        'strict': parse_bool(data.get('strict', 'true'), 'strict'),
+        'clean': parse_bool(data.get('clean', 'false'), 'clean'),
+    }
+
+
+def validate_layer_export_names(layer_exports):
+    seen = {}
+    for export_spec in layer_exports:
+        key = export_spec['name'].lower()
+        if key in seen:
+            raise SystemExit(
+                'Duplicate layer export name '
+                f'"{export_spec["name"]}". '
+                f'Already used by "{seen[key]}".'
+            )
+        seen[key] = export_spec['name']
+
+
+def collect_layer_exports(args):
+    layer_exports = []
+    for raw in args.layer_export or []:
+        layer_exports.append(parse_layer_export_arg(raw))
+
+    if args.split_shadow:
+        shadow_layers = args.shadow_layers if args.shadow_layers else list(DEFAULT_SHADOW_LAYERS)
+        layer_exports.append(
+            {
+                'name': 'shadow',
+                'output': args.shadow_output,
+                'layers': shadow_layers,
+                'strict': args.strict_shadow_layer,
+                'clean': args.clean_shadow_target,
+            }
+        )
+
+    validate_layer_export_names(layer_exports)
+    return layer_exports
 
 
 def find_nested_git_dir(target_root):
@@ -113,75 +216,97 @@ def run_export_command(cmd):
     subprocess.run(cmd, check=True)
 
 
+def prepare_layer_exports(aseprite, src, layer_exports):
+    if not layer_exports:
+        return [], []
+
+    available_layers = list_layers(aseprite, src)
+    print(f'[INFO] Sprite: {src}')
+    print(f'[INFO] Available layers: {", ".join(available_layers) if available_layers else "<none>"}')
+
+    active_exports = []
+    main_ignore_layers = []
+    for export_spec in layer_exports:
+        matched_layers = resolve_requested_layers(export_spec['layers'], available_layers)
+        print(f'[INFO] Layer export: {export_spec["name"]}')
+        print(f'[INFO] Requested layers: {", ".join(export_spec["layers"])}')
+        print(f'[INFO] Matched layers: {", ".join(matched_layers) if matched_layers else "<none>"}')
+        if not matched_layers:
+            error_message = (
+                f'No layer matched for export "{export_spec["name"]}" in {src}. '
+                f'Requested={export_spec["layers"]}, Available={available_layers}'
+            )
+            if export_spec['strict']:
+                raise SystemExit(error_message)
+            print(f'[WARN] {error_message}')
+            continue
+
+        normalized_export = dict(export_spec)
+        normalized_export['matched_layers'] = matched_layers
+        active_exports.append(normalized_export)
+        for layer_name in matched_layers:
+            if layer_name not in main_ignore_layers:
+                main_ignore_layers.append(layer_name)
+
+    return active_exports, main_ignore_layers
+
+
 def export_file(
     aseprite,
     src,
     out_root,
     preview=False,
-    split_shadow=False,
-    shadow_layers=None,
-    shadow_out_root='assets_shadow',
     clean_target=False,
-    clean_shadow_target=False,
-    strict_shadow_layer=True,
+    layer_exports=None,
 ):
     base = src.stem
     main_target_root = Path(out_root) / base
-    shadow_target_root = Path(shadow_out_root) / base
 
     if clean_target:
         clean_target_directory(main_target_root, preview)
-    if split_shadow and clean_shadow_target:
-        clean_target_directory(shadow_target_root, preview)
 
-    active_shadow_layers = []
-    if split_shadow:
-        available_layers = list_layers(aseprite, src)
-        active_shadow_layers = resolve_shadow_layers(shadow_layers, available_layers)
-        print(f'[INFO] Sprite: {src}')
-        print(f'[INFO] Available layers: {", ".join(available_layers) if available_layers else "<none>"}')
-        print(f'[INFO] Requested shadow layers: {", ".join(shadow_layers)}')
-        print(f'[INFO] Matched shadow layers: {", ".join(active_shadow_layers) if active_shadow_layers else "<none>"}')
-        if not active_shadow_layers:
-            error_message = (
-                f'No shadow layer matched for {src}. '
-                f'Requested={shadow_layers}, Available={available_layers}'
-            )
-            if strict_shadow_layer:
-                raise SystemExit(error_message)
-            print(f'[WARN] {error_message}')
+    active_layer_exports, main_ignore_layers = prepare_layer_exports(
+        aseprite=aseprite,
+        src=src,
+        layer_exports=layer_exports or [],
+    )
+
+    for export_spec in active_layer_exports:
+        export_target_root = Path(export_spec['output']) / base
+        if export_spec['clean']:
+            clean_target_directory(export_target_root, preview)
 
     if not preview:
         main_target_root.mkdir(parents=True, exist_ok=True)
-        if split_shadow:
-            shadow_target_root.mkdir(parents=True, exist_ok=True)
+        for export_spec in active_layer_exports:
+            export_target_root = Path(export_spec['output']) / base
+            export_target_root.mkdir(parents=True, exist_ok=True)
 
     main_save_as = str(main_target_root / '{tag}' / '{frame}.png')
-    main_include_layers = []
-    main_ignore_layers = active_shadow_layers if split_shadow and active_shadow_layers else []
     main_cmd = build_export_cmd(
         aseprite=aseprite,
         src=src,
         save_as=main_save_as,
-        include_layers=main_include_layers,
+        include_layers=[],
         ignore_layers=main_ignore_layers,
         preview=preview,
     )
     print(f'[INFO] Export main sprite -> {main_save_as}')
     run_export_command(main_cmd)
 
-    if split_shadow and active_shadow_layers:
-        shadow_save_as = str(shadow_target_root / '{tag}' / '{frame}.png')
-        shadow_cmd = build_export_cmd(
+    for export_spec in active_layer_exports:
+        export_target_root = Path(export_spec['output']) / base
+        export_save_as = str(export_target_root / '{tag}' / '{frame}.png')
+        export_cmd = build_export_cmd(
             aseprite=aseprite,
             src=src,
-            save_as=shadow_save_as,
-            include_layers=active_shadow_layers,
+            save_as=export_save_as,
+            include_layers=export_spec['matched_layers'],
             ignore_layers=[],
             preview=preview,
         )
-        print(f'[INFO] Export shadow sprite -> {shadow_save_as}')
-        run_export_command(shadow_cmd)
+        print(f'[INFO] Export {export_spec["name"]} sprite -> {export_save_as}')
+        run_export_command(export_cmd)
 
 
 def main():
@@ -191,9 +316,17 @@ def main():
     parser.add_argument('--output', default='assets', help='Output directory (default: assets)')
     parser.add_argument('--preview', action='store_true', help='Use Aseprite preview mode (no files written)')
     parser.add_argument(
+        '--layer-export',
+        action='append',
+        help=(
+            'Repeatable layer export spec. Format: '
+            '"name=<group>;output=<dir>;layers=<layer1,layer2>[;strict=true|false][;clean=true|false]"'
+        ),
+    )
+    parser.add_argument(
         '--split-shadow',
         action='store_true',
-        help='Split exports into main sprite (without shadow) and shadow-only output.',
+        help='Legacy helper: split exports into main sprite (without shadow) and shadow-only output.',
     )
     parser.add_argument(
         '--shadow-layer',
@@ -231,31 +364,29 @@ def main():
     parser.set_defaults(strict_shadow_layer=True)
     args = parser.parse_args()
 
+    if args.clean_shadow_target and not args.split_shadow:
+        raise SystemExit('--clean-shadow-target requires --split-shadow.')
+
     aseprite = find_aseprite(args.aseprite)
     files = expand_inputs(args.paths)
     if not files:
         raise SystemExit('No .aseprite files found for given inputs.')
-    if args.clean_shadow_target and not args.split_shadow:
-        raise SystemExit('--clean-shadow-target requires --split-shadow.')
 
-    shadow_layers = args.shadow_layers if args.shadow_layers else list(DEFAULT_SHADOW_LAYERS)
+    layer_exports = collect_layer_exports(args)
+
     if args.preview and args.clean_target:
         print('[PREVIEW] --clean-target requested; no directories will be deleted.')
     if args.preview and args.clean_shadow_target:
         print('[PREVIEW] --clean-shadow-target requested; no directories will be deleted.')
 
-    for f in files:
+    for src in files:
         export_file(
             aseprite=aseprite,
-            src=f,
+            src=src,
             out_root=args.output,
             preview=args.preview,
-            split_shadow=args.split_shadow,
-            shadow_layers=shadow_layers,
-            shadow_out_root=args.shadow_output,
             clean_target=args.clean_target,
-            clean_shadow_target=args.clean_shadow_target,
-            strict_shadow_layer=args.strict_shadow_layer,
+            layer_exports=layer_exports,
         )
 
 
