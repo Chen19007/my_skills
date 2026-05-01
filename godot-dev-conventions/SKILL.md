@@ -34,6 +34,12 @@ description: 沉淀可复用的 Godot 开发规范与实现范式，减少 zero-
   读取时机：设计场景结构、模块边界、依赖关系、autoload 访问方式时。
 - `references/animation-and-state.md`
   读取时机：处理 `AnimationPlayer`、状态切换、演出驱动逻辑时。
+- `references/hitbox-hurtbox.md`
+  读取时机：设计攻击判定、受击判定、命中确认、投射物命中协议时。
+- `references/collision-layers.md`
+  读取时机：规划物理层、战斗层、`collision_layer` / `collision_mask` 分工时。
+- `references/z-depth-planning.md`
+  读取时机：规划角色、投射物、特效、前后景的 `z_index` 关系时。
 - `references/pattern-backlog.md`
   读取时机：需要补充新的公共范式时，先看这里的待沉淀主题与收录标准。
 
