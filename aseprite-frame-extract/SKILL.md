@@ -22,6 +22,8 @@ description: Batch-export per-tag animation frames from .aseprite files into cat
 - Tag names and frames are exported as-is; tag names become folder names.
 - If a sprite has no tags, no frames are exported.
 - Every active `--layer-export` removes its matched layers from the main export automatically.
+- `--main-ignore-layer` can additionally exclude specific layers from main export, even without corresponding `--layer-export`.
+- `--tag` can restrict exports to selected tags only.
 - `--layer-export` is repeatable, so one run can export `shadow`, `effect`, or other layer groups together.
 - When a requested layer group is missing:
   - `strict=true` fails fast.
@@ -47,6 +49,8 @@ python scripts/extract_aseprite_frames.py "D:\project\godot\blockking\aseprite_a
 python scripts/extract_aseprite_frames.py "D:\project\godot\blockking\aseprite_assets\*.aseprite" --preview
 
 python scripts/extract_aseprite_frames.py "D:\project\godot\blockking\aseprite_assets\Archer.aseprite" --aseprite "D:\tools\Aseprite-v1.3.15.3-Windows\aseprite.exe" --output "D:\project\godot\blockking\assets" --layer-export "name=effect;output=D:\project\godot\blockking\assets_effect;layers=effect" --preview
+
+python scripts/extract_aseprite_frames.py "D:\project\godot\blockking\aseprite_assets\Armored Orc.aseprite" --aseprite "D:\tools\Aseprite-v1.3.15.3-Windows\aseprite.exe" --output "D:\project\godot\blockking\assets" --layer-export "name=effect;output=D:\project\godot\blockking\assets_effect;layers=effect;strict=false" --main-ignore-layer shadow --tag Attack03 --preview
 
 python scripts/extract_aseprite_frames.py "D:\project\godot\blockking\aseprite_assets" --aseprite "D:\tools\Aseprite-v1.3.15.3-Windows\aseprite.exe" --output "D:\project\godot\blockking\assets" --layer-export "name=effect;output=D:\project\godot\blockking\assets_effect;layers=effect;clean=true" --layer-export "name=shadow;output=D:\project\godot\blockking\assets_shadow;layers=shadow;strict=false;clean=true" --clean-target --preview
 

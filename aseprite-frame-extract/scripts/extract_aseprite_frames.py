@@ -198,8 +198,18 @@ def clean_target_directory(target_root, preview):
     print(f'[INFO] Removed target directory: {target_root}')
 
 
-def build_export_cmd(aseprite, src, save_as, include_layers, ignore_layers, preview):
+def build_export_cmd(
+    aseprite,
+    src,
+    save_as,
+    include_layers,
+    ignore_layers,
+    preview,
+    tag_filters=None,
+):
     cmd = [aseprite, '-b', '--split-tags']
+    for tag_name in tag_filters or []:
+        cmd.extend(['--tag', tag_name])
     for layer_name in include_layers:
         cmd.extend(['--layer', layer_name])
     for layer_name in ignore_layers:
@@ -216,8 +226,9 @@ def run_export_command(cmd):
     subprocess.run(cmd, check=True)
 
 
-def prepare_layer_exports(aseprite, src, layer_exports):
-    if not layer_exports:
+def prepare_layer_exports(aseprite, src, layer_exports, requested_main_ignore_layers=None):
+    requested_main_ignore_layers = requested_main_ignore_layers or []
+    if not layer_exports and not requested_main_ignore_layers:
         return [], []
 
     available_layers = list_layers(aseprite, src)
@@ -248,6 +259,18 @@ def prepare_layer_exports(aseprite, src, layer_exports):
             if layer_name not in main_ignore_layers:
                 main_ignore_layers.append(layer_name)
 
+    for requested_layer in requested_main_ignore_layers:
+        matched_layers = resolve_requested_layers([requested_layer], available_layers)
+        if not matched_layers:
+            print(
+                f'[WARN] Main ignore layer not found in {src}: "{requested_layer}". '
+                f'Available={available_layers}'
+            )
+            continue
+        for layer_name in matched_layers:
+            if layer_name not in main_ignore_layers:
+                main_ignore_layers.append(layer_name)
+
     return active_exports, main_ignore_layers
 
 
@@ -258,6 +281,8 @@ def export_file(
     preview=False,
     clean_target=False,
     layer_exports=None,
+    main_ignore_layers=None,
+    tag_filters=None,
 ):
     base = src.stem
     main_target_root = Path(out_root) / base
@@ -269,6 +294,7 @@ def export_file(
         aseprite=aseprite,
         src=src,
         layer_exports=layer_exports or [],
+        requested_main_ignore_layers=main_ignore_layers or [],
     )
 
     for export_spec in active_layer_exports:
@@ -290,6 +316,7 @@ def export_file(
         include_layers=[],
         ignore_layers=main_ignore_layers,
         preview=preview,
+        tag_filters=tag_filters or [],
     )
     print(f'[INFO] Export main sprite -> {main_save_as}')
     run_export_command(main_cmd)
@@ -304,6 +331,7 @@ def export_file(
             include_layers=export_spec['matched_layers'],
             ignore_layers=[],
             preview=preview,
+            tag_filters=tag_filters or [],
         )
         print(f'[INFO] Export {export_spec["name"]} sprite -> {export_save_as}')
         run_export_command(export_cmd)
@@ -350,6 +378,18 @@ def main():
         help='Delete shadow target sprite directory before exporting (requires --split-shadow).',
     )
     parser.add_argument(
+        '--main-ignore-layer',
+        action='append',
+        dest='main_ignore_layers',
+        help='Exclude layer from main sprite export (repeatable).',
+    )
+    parser.add_argument(
+        '--tag',
+        action='append',
+        dest='tags',
+        help='Export only selected tag(s), repeatable.',
+    )
+    parser.add_argument(
         '--strict-shadow-layer',
         dest='strict_shadow_layer',
         action='store_true',
@@ -387,6 +427,8 @@ def main():
             preview=args.preview,
             clean_target=args.clean_target,
             layer_exports=layer_exports,
+            main_ignore_layers=args.main_ignore_layers or [],
+            tag_filters=args.tags or [],
         )
 
 
