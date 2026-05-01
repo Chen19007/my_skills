@@ -1,0 +1,4 @@
+interface:
+  display_name: "Godot Dev Conventions"
+  short_description: "沉淀可复用的 Godot 编码规范与开发范式，降低 zero-shot 乱发挥。"
+  default_prompt: "使用已沉淀的 Godot 规范和常用范式完成实现，优先复用既有模式而不是临场发明。"
