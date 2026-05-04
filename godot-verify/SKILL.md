@@ -163,6 +163,21 @@ curl "http://127.0.0.1:3457/stats"
 
 **建议**: 使用 LSP Diagnostics 作为快速检查，gdlint 作为补充 lint 规则检查。
 
+## 资源导入前置检查
+
+当在项目中新增 `png`、`tscn` 等资源后，如果 `preload("res://...")`、Godot 编辑器或 `godot-lsp__diagnostics` 报告 `has no resource loaders` 或 `No loader found for resource` 错误，**请先不要** 将代码修改为运行时文件读取方式。
+
+应按以下步骤进行检查和修复：
+
+1. **检查导入状态**：验证资源文件旁是否存在对应的 `.import` 文件，以及 `.godot/imported/` 目录下是否生成了相应的导入产物（如 `.ctex`、`.md5` 文件）。
+2. **执行导入命令**：若缺失导入产物，优先执行 Godot 的官方导入链进行修复：
+   ```bash
+   godot --headless --path "<项目根目录绝对路径>" --import --quit
+   ```
+
+**实测验证**：
+该命令已在项目 `D:/project/godot/blockking` 中得到实测验证：执行后成功为新增的 `hold_on1~5.png` 生成了 `.import` 文件及导入产物，解决了 `preload` 报错和 LSP 诊断异常。
+
 ## Lint Rules (gdlint)
 
 | Rule | Severity | Description |
