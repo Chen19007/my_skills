@@ -31,7 +31,7 @@ description: 沉淀可复用的 Godot 开发规范与实现范式，减少 zero-
 - `references/coding-style.md`
   读取时机：编写或重构 GDScript，统一命名、类型、成员顺序和节点引用方式时。
 - `references/scene-and-architecture.md`
-  读取时机：设计场景结构、模块边界、依赖关系、autoload 访问方式时。
+  读取时机：设计场景结构、模块边界、依赖关系、autoload 访问方式，或排查资源 UID / 场景引用错绑时。
 - `references/animation-and-state.md`
   读取时机：处理 `AnimationPlayer`、状态切换、演出驱动逻辑时。
 - `references/hitbox-hurtbox.md`
