@@ -56,26 +56,26 @@ F <line>:<col> <function_name> - <grade> (<cc>)
 
 ```bash
 # Lint 检查
-gdlint "D:/project/scripts/Player.gd"
+gdlint "<project-root>/scripts/Player.gd"
 
 # Format 检查
-gdformat --check "D:/project/scripts/Player.gd"
+gdformat --check "<project-root>/scripts/Player.gd"
 
 # 代码指标
-gdradon cc D:/project/scripts/
+gdradon cc "<project-root>/scripts"
 
 # LSP 诊断（通过 MCP 工具获取）
 # 调用 MCP 工具获取诊断（只需 uri 参数）
-godot-lsp__diagnostics(uri="file:///D:/project/game/player.gd")
+godot-lsp__diagnostics(uri="file:///absolute/path/to/project/player.gd")
 
 # LSP 诊断（修改代码后使用 refresh=true）
-godot-lsp__diagnostics(uri="file:///D:/project/game/player.gd", refresh=true)
+godot-lsp__diagnostics(uri="file:///absolute/path/to/project/player.gd", refresh=true)
 
 # 完整检查
-gdlint D:/project/scripts/ && gdformat D:/project/scripts/ && gdradon cc D:/project/scripts/
+gdlint "<project-root>/scripts" && gdformat "<project-root>/scripts" && gdradon cc "<project-root>/scripts"
 
 # 导出验证
-godot --headless --path "D:/project" --export-pack "Web" "D:/export.pck"
+godot --headless --path "<project-root>" --export-pack "Web" "<output-dir>/export.pck"
 ```
 
 ## LSP Diagnostics
@@ -94,13 +94,13 @@ godot --headless --path "D:/project" --export-pack "Web" "D:/export.pck"
 > 不要直接调用 DiagnosticsServer 的 HTTP API；这是内部实现细节，agent 只能通过 `godot-lsp__diagnostics` MCP 工具获取诊断。若 MCP 工具不可用，应报告“当前线程不可用”，不要改用 HTTP 兜底。
 
 **参数**:
-- `uri` (必需): `file://` URI，例如 `file:///D:/project/game/player.gd`
+- `uri` (必需): `file://` URI，例如 `file:///absolute/path/to/project/player.gd`
 - `refresh` (可选): 是否强制刷新诊断缓存，默认 false
 
 **返回**:
 ```json
 {
-  "uri": "file:///D:/project/game/player.gd",
+  "uri": "file:///absolute/path/to/project/player.gd",
   "diagnostics": [
     {
       "range": { "start": { "line": 4, "character": 0 }, "end": { "line": 4, "character": 56 } },
@@ -164,8 +164,7 @@ godot --headless --path "D:/project" --export-pack "Web" "D:/export.pck"
    godot --headless --path "<项目根目录绝对路径>" --import --quit
    ```
 
-**实测验证**：
-该命令已在项目 `D:/project/godot/blockking` 中得到实测验证：执行后成功为新增的 `hold_on1~5.png` 生成了 `.import` 文件及导入产物，解决了 `preload` 报错和 LSP 诊断异常。
+导入成功后，应能在资源旁看到对应 `.import` 文件，并在 `.godot/imported/` 下看到相应导入产物；随后再重新检查 `preload("res://...")`、编辑器或 LSP 诊断中的资源加载错误。
 
 ## 场景与 UID 验证
 
@@ -173,21 +172,24 @@ godot --headless --path "D:/project" --export-pack "Web" "D:/export.pck"
 
 必须用 PowerShell 7+ 的 `pwsh` 运行 `scripts/verify_godot_uids.ps1`，不要用 Windows PowerShell 5.1 的 `powershell.exe`。脚本内部也会检查 PowerShell 版本；Windows PowerShell 5.1 缺少 `[System.IO.Path]::GetRelativePath`，会被明确拒绝。
 
+从 `godot-verify` skill 目录运行：
+
 ```powershell
-pwsh -NoProfile -ExecutionPolicy Bypass -File "D:\project\docs\my_skills\godot-verify\scripts\verify_godot_uids.ps1" -ProjectRoot "<项目根目录绝对路径>"
+pwsh -NoProfile -ExecutionPolicy Bypass -File "./scripts/verify_godot_uids.ps1" -ProjectRoot "<project-root>"
 ```
 
-BlockKing 示例：
+从任意目录运行时，使用脚本的绝对路径：
 
 ```powershell
-pwsh -NoProfile -ExecutionPolicy Bypass -File "D:\project\docs\my_skills\godot-verify\scripts\verify_godot_uids.ps1" -ProjectRoot "D:\project\godot\blockking"
+pwsh -NoProfile -ExecutionPolicy Bypass -File "<skill-root>/scripts/verify_godot_uids.ps1" -ProjectRoot "<project-root>"
 ```
 
 目标场景加载验证示例：
 
 ```bash
-godot --headless --path "<项目根目录绝对路径>" --scene "res://path/to/scene.tscn" --quit
+godot --headless --path "<project-root>" --scene "res://path/to/scene.tscn" --quit
 ```
+
 ## Lint Rules (gdlint)
 
 | Rule | Severity | Description |
@@ -214,17 +216,17 @@ godot --headless --path "<项目根目录绝对路径>" --scene "res://path/to/s
 
 ### After Code Changes
 ```bash
-gdlint "D:/project/scripts/Player.gd"
+gdlint "<project-root>/scripts/Player.gd"
 ```
 
 ### Pre-commit Validation
 ```bash
-gdlint D:/project/scripts/ && gdformat D:/project/scripts/
+gdlint "<project-root>/scripts" && gdformat "<project-root>/scripts"
 ```
 
 ### Code Metrics Analysis
 ```bash
-gdradon cc D:/project/scripts/
+gdradon cc "<project-root>/scripts"
 ```
 输出示例：
 ```
@@ -234,7 +236,7 @@ gdradon cc D:/project/scripts/
 
 ### Export Validation
 ```bash
-godot --headless --path "D:/project" --export-pack "Web" "D:/export.pck"
+godot --headless --path "<project-root>" --export-pack "Web" "<output-dir>/export.pck"
 ```
 
 ## 安装要求
@@ -249,5 +251,9 @@ godot --headless --path "D:/project" --export-pack "Web" "D:/export.pck"
 - `gdformat --check` shows what would change without modifying
 - `gdradon cc` shows complexity and maintainability metrics
 - Export validation catches dependency issues lint misses
+
+
+
+
 
 
