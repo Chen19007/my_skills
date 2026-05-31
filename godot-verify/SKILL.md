@@ -64,7 +64,7 @@ gdformat --check "D:/project/scripts/Player.gd"
 # 代码指标
 gdradon cc D:/project/scripts/
 
-# LSP 诊断（DiagnosticsServer 为开机自启动服务）
+# LSP 诊断（通过 MCP 工具获取）
 # 调用 MCP 工具获取诊断（只需 uri 参数）
 godot-lsp__diagnostics(uri="file:///D:/project/game/player.gd")
 
@@ -85,11 +85,13 @@ godot --headless --path "D:/project" --export-pack "Web" "D:/export.pck"
 ### 前置条件
 
 1. **Godot 编辑器运行**（Godot LSP 服务器在编辑器启动时自动开启，默认端口 6005）
-2. **DiagnosticsServer 运行**（开机自启动服务，提供诊断缓存）
+2. **Godot LSP diagnostics MCP 工具可用**（只通过 MCP 工具获取诊断）
 
 ### MCP 工具调用
 
 **工具名**: `godot-lsp__diagnostics`
+
+> 不要直接调用 DiagnosticsServer 的 HTTP API；这是内部实现细节，agent 只能通过 `godot-lsp__diagnostics` MCP 工具获取诊断。若 MCP 工具不可用，应报告“当前线程不可用”，不要改用 HTTP 兜底。
 
 **参数**:
 - `uri` (必需): `file://` URI，例如 `file:///D:/project/game/player.gd`
@@ -113,7 +115,7 @@ godot --headless --path "D:/project" --export-pack "Web" "D:/export.pck"
 ```
 
 **说明**:
-- DiagnosticsServer 会自动读取文件内容，无需传递 `text` 参数
+- MCP diagnostics 工具会读取目标文件内容，无需传递 `text` 参数
 - 首次查询会打开文件并等待诊断（约 500ms）
 - 后续查询直接从缓存返回，速度更快
 - **修改代码后推荐使用 `refresh=true` 强制刷新缓存**，确保获取最新诊断结果
@@ -137,19 +139,6 @@ godot --headless --path "D:/project" --export-pack "Web" "D:/export.pck"
 | 21 | `RETURN_VALUE_DISCARDED` | 返回值未使用 |
 | 30 | `UNSAFE_CALL` | 不安全的函数调用 |
 | 40 | `UNASSIGNED_VARIABLE_ACCESS` | 访问未赋值的变量 |
-
-### HTTP API（直接访问 DiagnosticsServer）
-
-```bash
-# 获取诊断
-curl "http://127.0.0.1:3457/diagnostics?path=D:/project/game/player.gd"
-
-# 刷新诊断
-curl -X POST "http://127.0.0.1:3457/refresh" -d "{\"path\":\"D:/project/game/player.gd\"}"
-
-# 查看状态
-curl "http://127.0.0.1:3457/stats"
-```
 
 ### 与 gdlint 对比
 
