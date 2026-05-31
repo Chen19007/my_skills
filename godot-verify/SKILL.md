@@ -167,6 +167,27 @@ godot --headless --path "D:/project" --export-pack "Web" "D:/export.pck"
 **实测验证**：
 该命令已在项目 `D:/project/godot/blockking` 中得到实测验证：执行后成功为新增的 `hold_on1~5.png` 生成了 `.import` 文件及导入产物，解决了 `preload` 报错和 LSP 诊断异常。
 
+## 场景与 UID 验证
+
+修改 `.tscn` / `.tres` 后，运行本 skill 自带的 UID 验证脚本、Godot 导入链和目标场景加载验证。
+
+必须用 PowerShell 7+ 的 `pwsh` 运行 `scripts/verify_godot_uids.ps1`，不要用 Windows PowerShell 5.1 的 `powershell.exe`。脚本内部也会检查 PowerShell 版本；Windows PowerShell 5.1 缺少 `[System.IO.Path]::GetRelativePath`，会被明确拒绝。
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File "D:\project\docs\my_skills\godot-verify\scripts\verify_godot_uids.ps1" -ProjectRoot "<项目根目录绝对路径>"
+```
+
+BlockKing 示例：
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File "D:\project\docs\my_skills\godot-verify\scripts\verify_godot_uids.ps1" -ProjectRoot "D:\project\godot\blockking"
+```
+
+目标场景加载验证示例：
+
+```bash
+godot --headless --path "<项目根目录绝对路径>" --scene "res://path/to/scene.tscn" --quit
+```
 ## Lint Rules (gdlint)
 
 | Rule | Severity | Description |
@@ -228,3 +249,5 @@ godot --headless --path "D:/project" --export-pack "Web" "D:/export.pck"
 - `gdformat --check` shows what would change without modifying
 - `gdradon cc` shows complexity and maintainability metrics
 - Export validation catches dependency issues lint misses
+
+
