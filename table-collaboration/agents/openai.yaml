@@ -1,0 +1,4 @@
+interface:
+  display_name: "表格协作"
+  short_description: "用固定编号和反馈历史维护协作表，逐项讨论、处理、验收并持续更新进展"
+  default_prompt: "使用 $table-collaboration 为当前任务建立或更新协作表，保留反馈原文与历史，并按固定编号推进处理和验收。"
